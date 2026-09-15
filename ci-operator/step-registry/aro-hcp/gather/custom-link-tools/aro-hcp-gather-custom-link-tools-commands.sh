@@ -31,16 +31,19 @@ else
   # already does with this profile's client-id/tenant/client-secret.
   echo "No subscription-id file found at ${SUB_FILE}, falling back to resolving it via subscription name"
   NAME_FILE="${CLUSTER_PROFILE_DIR}/subscription-name"
-  if [[ ! -s "${NAME_FILE}" ]]; then
-    echo "No subscription-name file found at ${NAME_FILE} either, cannot resolve subscription ID"
-    exit 1
-  fi
 
   # Disable tracing before the subscription name (and the service-principal
   # credentials) are read, and keep it disabled through the az calls and
   # error handling below so neither value is ever echoed into CI logs.
   set +o xtrace
-  SUBSCRIPTION_NAME=$(cat "${NAME_FILE}")
+  if [[ -n "${CUSTOMER_SUBSCRIPTION:-}" ]]; then
+    SUBSCRIPTION_NAME="${CUSTOMER_SUBSCRIPTION}"
+  elif [[ -s "${NAME_FILE}" ]]; then
+    SUBSCRIPTION_NAME=$(cat "${NAME_FILE}")
+  else
+    echo "No subscription name found in the slot env or at ${NAME_FILE}, cannot resolve subscription ID"
+    exit 1
+  fi
   AZURE_CLIENT_ID=$(cat "${CLUSTER_PROFILE_DIR}/client-id")
   AZURE_TENANT_ID=$(cat "${CLUSTER_PROFILE_DIR}/tenant")
   AZURE_CLIENT_SECRET=$(cat "${CLUSTER_PROFILE_DIR}/client-secret")
